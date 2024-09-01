@@ -167,14 +167,15 @@ class GraphCacheServer:
       self.fetch_from_cache(nodeflow)
       return
     with torch.autograd.profiler.record_function('cache-idxload'):
-      nf_nids = nodeflow._node_mapping.tousertensor().cuda(self.gpuid)
-      offsets = nodeflow._layer_offsets
+      nf_nids = nodeflow._node_mapping.tousertensor().cuda(self.gpuid) # 可能是[node_num, 1]
+      offsets = nodeflow._layer_offsets # 可能是每一层的第一个节点id在tensor中的偏移
+    # 遍历每一层的节点
     for i in range(nodeflow.num_layers):
       #with torch.autograd.profiler.record_function('cache-idx-load'):
         #tnid = nodeflow.layer_parent_nid(i).cuda(self.gpuid)
-      tnid = nf_nids[offsets[i]:offsets[i+1]]
+      tnid = nf_nids[offsets[i]:offsets[i+1]] # 可能是每一层的节点id
       # get nids -- overhead ~0.1s
-      with torch.autograd.profiler.record_function('cache-index'):
+      with torch.autograd.profiler.record_function('cache-index'):  # 分别获得在GPU和CPU上的节点id
         gpu_mask = self.gpu_flag[tnid]
         nids_in_gpu = tnid[gpu_mask]
         cpu_mask = ~gpu_mask
